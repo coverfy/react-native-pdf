@@ -328,7 +328,7 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
     private void handleUri(String uri) {
         Intent i = new Intent(Intent.ACTION_VIEW);
         i.setData(Uri.parse(uri));
-        startActivity(i);
+        this.context.getCurrentActivity().startActivity(i);
 
         // WritableMap event = Arguments.createMap();
         // event.putString("message", "linkPressed|"+uri);
