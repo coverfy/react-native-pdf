@@ -11,6 +11,7 @@ package org.wonday.pdf;
 import java.io.File;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.util.Log;
@@ -32,6 +33,8 @@ import com.github.barteksc.pdfviewer.listener.OnDrawListener;
 import com.github.barteksc.pdfviewer.listener.OnPageScrollListener;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.github.barteksc.pdfviewer.util.Constants;
+import com.github.barteksc.pdfviewer.link.LinkHandler;
+import com.github.barteksc.pdfviewer.model.LinkTapEvent;
 
 import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactContext;
@@ -53,7 +56,7 @@ import com.shockwave.pdfium.PdfDocument;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompleteListener,OnErrorListener,OnTapListener,OnDrawListener,OnPageScrollListener {
+public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompleteListener,OnErrorListener,OnTapListener,OnDrawListener,OnPageScrollListener, LinkHandler {
     private ThemedReactContext context;
     private int page = 1;               // start from 1
     private boolean horizontal = false;
@@ -107,10 +110,10 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
 
         float width = this.getWidth();
         float height = this.getHeight();
-        
+
         this.zoomTo(this.scale);
         WritableMap event = Arguments.createMap();
-        
+
         //create a new jason Object for the TableofContents
         Gson gson = new Gson();
         event.putString("message", "loadComplete|"+numberOfPages+"|"+width+"|"+height+"|"+gson.toJson(this.getTableOfContents()));
@@ -120,7 +123,7 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
             "topChange",
             event
          );
-        
+
         //Log.e("ReactNative", gson.toJson(this.getTableOfContents()));
 
     }
@@ -228,6 +231,7 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
                 .autoSpacing(this.autoSpacing)
                 .pageFling(this.pageFling)
                 .enableAnnotationRendering(this.enableAnnotationRendering)
+                .linkHandler(this)
                 .load();
 
         }
@@ -303,6 +307,45 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
             }
         }
 
+    }
+
+    /**
+     * @see https://github.com/barteksc/AndroidPdfViewer/blob/master/android-pdf-viewer/src/main/java/com/github/barteksc/pdfviewer/link/DefaultLinkHandler.java
+     */
+    public void handleLinkEvent(LinkTapEvent event) {
+        String uri = event.getLink().getUri();
+        Integer page = event.getLink().getDestPageIdx();
+        if (uri != null && !uri.isEmpty()) {
+            handleUri(uri);
+        } else if (page != null) {
+            handlePage(page);
+        }
+    }
+
+    /**
+     * @see https://github.com/barteksc/AndroidPdfViewer/blob/master/android-pdf-viewer/src/main/java/com/github/barteksc/pdfviewer/link/DefaultLinkHandler.java
+     */
+    private void handleUri(String uri) {
+        Intent i = new Intent(Intent.ACTION_VIEW);
+        i.setData(Uri.parse(uri));
+        startActivity(i);
+
+        // WritableMap event = Arguments.createMap();
+        // event.putString("message", "linkPressed|"+uri);
+
+        // ReactContext reactContext = (ReactContext)this.getContext();
+        // reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
+        //     this.getId(),
+        //     "topChange",
+        //     event
+        // );
+    }
+
+    /**
+     * @see https://github.com/barteksc/AndroidPdfViewer/blob/master/android-pdf-viewer/src/main/java/com/github/barteksc/pdfviewer/link/DefaultLinkHandler.java
+     */
+    private void handlePage(int page) {
+        this.jumpTo(page);
     }
 
     private void showLog(final String str) {
